@@ -16,17 +16,22 @@
 import express from 'express';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
+import cors from 'cors';
+
+// File system
+import fs from 'fs';
+import path from 'path';
 
 // Custom Modules
 import config from '@/config';
 import { logger } from '@/libs/winston';
+
+// Database confiugration
 import { connectToDatabase } from '@/libs/postgresql';
-// import { schema } from '@/graphql';
-import path from 'path';
-import fs from 'fs';
-import cors from 'cors';
+
+// GraphQL
 import { userResolvers } from '@/graphql/resolvers/user.resolver';
-import { json } from 'body-parser';
+import { productResolvers } from '@/graphql/resolvers/product.resolver';
 
 export async function startServer() {
   const app = express();
@@ -35,27 +40,32 @@ export async function startServer() {
 
   app.use(express.json());
 
-  const typeDefs = fs.readFileSync(
+  const userTypeDefs = fs.readFileSync(
     path.join(__dirname, 'graphql/schemas/user.graphql'),
     'utf8',
   );
 
+  const productTypeDefs = fs.readFileSync(
+    path.join(__dirname, 'graphql/schemas/product.graphql'),
+    'utf8',
+  );
+
   const server = new ApolloServer({
-    typeDefs,
-    resolvers: userResolvers,
+    typeDefs: [userTypeDefs, productTypeDefs],
+    resolvers: [userResolvers, productResolvers],
   });
+
   await server.start();
 
   app.use(
     '/graphql',
     cors<cors.CorsRequest>(),
-    json(),
     expressMiddleware(server, {
       context: async ({ req }) => ({ token: req.headers.token }),
     }),
   );
 
   app.listen(config.PORT, () => {
-    logger.info(`Server is running on port ${config.PORT}`);
+    logger.info(`Server is running on http://localhost:${config.PORT}/graphql`);
   });
 }

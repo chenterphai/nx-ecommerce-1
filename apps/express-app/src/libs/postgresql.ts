@@ -16,13 +16,14 @@ import config from '@/config';
 import { User } from '@/entities/User';
 import { DataSource } from 'typeorm';
 import { logger } from '@/libs/winston';
+import { Product } from '@/entities/Product';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
   url: config.DATABASE_URL,
   synchronize: true, // use migrations in production!
   logging: false,
-  entities: [User],
+  entities: [User, Product],
   migrations: [],
   subscribers: [],
 });
