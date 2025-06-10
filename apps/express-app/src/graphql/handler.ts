@@ -12,32 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {
-  BaseEntity,
-  Column,
-  Entity,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import { Category } from './Category';
+import { loadFilesSync } from '@graphql-tools/load-files';
+import { mergeResolvers, mergeTypeDefs } from '@graphql-tools/merge';
+import path from 'path';
 
-@Entity({ name: 'fa_products' })
-export class Product extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id!: number;
+const typesArray = loadFilesSync(path.join(__dirname, './schemas'), {
+  extensions: ['graphql'],
+});
 
-  @Column()
-  name!: string;
+const resolverArray = loadFilesSync(path.join(__dirname, './resolvers'), {
+  extensions: ['ts', 'js'],
+  requireMethod: require,
+  ignoreIndex: true,
+});
 
-  @Column()
-  description!: string;
+const typeDefs = mergeTypeDefs(typesArray);
 
-  @Column()
-  price!: string;
+const resolvers = mergeResolvers(resolverArray);
 
-  @ManyToOne(() => Category, (category) => category.products)
-  category!: string;
-
-  @Column()
-  categoryId!: number; // Foreign Key
-}
+export { typeDefs, resolvers };

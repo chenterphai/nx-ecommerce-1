@@ -12,11 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { Category } from '@/entities/Category';
 import { Product } from '@/entities/Product';
+import { AppDataSource } from '@/libs/postgresql';
+import { logger } from '@/libs/winston';
 
-export const productResolvers = {
+export default {
   Query: {
-    products: async () => await Product.find(),
+    products: async () => {
+      const userRepository = AppDataSource.getRepository(Product);
+      const products = await userRepository.find({
+        relations: ['category'],
+      });
+      logger.info(`✅ Product fetched successfully!`);
+      return products;
+    },
+
+    categories: async () => {
+      const categoryRepository = AppDataSource.getRepository(Category);
+      const categories = await categoryRepository.find({
+        relations: ['products'],
+      });
+      logger.info(`✅ Categories fetched successfully.`);
+      return categories;
+    },
   },
   Mutation: {
     createProduct: async (
@@ -25,14 +44,38 @@ export const productResolvers = {
         name,
         description,
         price,
-      }: { name: string; description: string; price: string },
+        categoryId,
+      }: {
+        name: string;
+        description: string;
+        price: string;
+        categoryId: number;
+      },
     ) => {
-      const product = Product.create({
+      const productRepo = AppDataSource.getRepository(Product);
+      const categoryRepo = AppDataSource.getRepository(Category);
+
+      // Find Available Category
+      const category = await categoryRepo.findOneBy({ id: categoryId });
+
+      if (!category) {
+        logger.warn('Category Not Found');
+        throw new Error('Category Not Found');
+      }
+
+      // Prepare Product
+      const product = productRepo.create({
         name,
         description,
         price,
+        categoryId,
       });
-      return await product.save();
+
+      // Insert Product
+      const newProduct = await productRepo.save(product);
+
+      logger.info(`Product has been saved. Product ID is ${newProduct.id}`);
+      return product;
     },
   },
 };

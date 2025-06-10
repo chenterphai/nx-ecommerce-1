@@ -12,32 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {
-  BaseEntity,
-  Column,
-  Entity,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import { Category } from './Category';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Product } from './Product';
 
-@Entity({ name: 'fa_products' })
-export class Product extends BaseEntity {
+@Entity({ name: 'fa_categories' })
+export class Category {
   @PrimaryGeneratedColumn()
   id!: number;
 
   @Column()
   name!: string;
 
-  @Column()
-  description!: string;
-
-  @Column()
-  price!: string;
-
-  @ManyToOne(() => Category, (category) => category.products)
-  category!: string;
-
-  @Column()
-  categoryId!: number; // Foreign Key
+  @OneToMany(() => Product, (product) => product.category)
+  products!: Product[];
 }

@@ -14,7 +14,7 @@
 
 import { User } from '@/entities/User';
 
-export const userResolvers = {
+export default {
   Query: {
     users: async () => await User.find(),
     user: async (_: any, { id }: { id: number }) =>

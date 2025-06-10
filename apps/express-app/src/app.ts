@@ -18,10 +18,6 @@ import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import cors from 'cors';
 
-// File system
-import fs from 'fs';
-import path from 'path';
-
 // Custom Modules
 import config from '@/config';
 import { logger } from '@/libs/winston';
@@ -30,42 +26,40 @@ import { logger } from '@/libs/winston';
 import { connectToDatabase } from '@/libs/postgresql';
 
 // GraphQL
-import { userResolvers } from '@/graphql/resolvers/user.resolver';
-import { productResolvers } from '@/graphql/resolvers/product.resolver';
+import { resolvers, typeDefs } from '@/graphql/handler';
+
+type MyContext = {
+  token: string | string[] | undefined;
+};
 
 export async function startServer() {
   const app = express();
 
+  // Initialize Database Connection
   await connectToDatabase();
 
-  app.use(express.json());
-
-  const userTypeDefs = fs.readFileSync(
-    path.join(__dirname, 'graphql/schemas/user.graphql'),
-    'utf8',
-  );
-
-  const productTypeDefs = fs.readFileSync(
-    path.join(__dirname, 'graphql/schemas/product.graphql'),
-    'utf8',
-  );
-
-  const server = new ApolloServer({
-    typeDefs: [userTypeDefs, productTypeDefs],
-    resolvers: [userResolvers, productResolvers],
+  // Define GraphQL Server with Apollo
+  const server = new ApolloServer<MyContext>({
+    typeDefs,
+    resolvers,
   });
 
+  // Start GraphQL Server
   await server.start();
 
+  // Apply CORS, and QraphQL Server with ExpressJS
   app.use(
-    '/graphql',
+    '/api/v1',
     cors<cors.CorsRequest>(),
+    express.json(),
     expressMiddleware(server, {
       context: async ({ req }) => ({ token: req.headers.token }),
     }),
   );
 
   app.listen(config.PORT, () => {
-    logger.info(`Server is running on http://localhost:${config.PORT}/graphql`);
+    logger.info(
+      `🌍 GraphQL Server is running on http://localhost:${config.PORT}/api/v1`,
+    );
   });
 }
