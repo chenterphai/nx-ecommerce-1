@@ -1,0 +1,37 @@
+##  AUTH GRAPHQL:
+#   Handle User Register, Login, Refresh Token and Logout
+##
+
+# Response Schema
+type LoginResponse {
+  status: Status!
+  content: LoginContent
+  error: String
+}
+
+#  Status Schema
+type Status {
+  code: Int!
+  status: String!
+  msg: String!
+}
+
+# Login Content Response
+type LoginContent {
+  data: LoginData!
+}
+
+#  Login Data Response
+type LoginData {
+  id: ID!
+  username: String!
+  email: String!
+  role: String!
+  accessToken: String!
+}
+
+# Login Input Request
+input LoginInput {
+  email: String!
+  password: String!
+}

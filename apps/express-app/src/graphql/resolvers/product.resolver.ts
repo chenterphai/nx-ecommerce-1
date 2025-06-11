@@ -27,55 +27,46 @@ export default {
       logger.info(`✅ Product fetched successfully!`);
       return products;
     },
-
-    categories: async () => {
-      const categoryRepository = AppDataSource.getRepository(Category);
-      const categories = await categoryRepository.find({
-        relations: ['products'],
-      });
-      logger.info(`✅ Categories fetched successfully.`);
-      return categories;
-    },
   },
-  Mutation: {
-    createProduct: async (
-      _: any,
-      {
-        name,
-        description,
-        price,
-        categoryId,
-      }: {
-        name: string;
-        description: string;
-        price: string;
-        categoryId: number;
-      },
-    ) => {
-      const productRepo = AppDataSource.getRepository(Product);
-      const categoryRepo = AppDataSource.getRepository(Category);
+  // Mutation: {
+  //   createProduct: async (
+  //     _: any,
+  //     {
+  //       name,
+  //       description,
+  //       price,
+  //       categoryId,
+  //     }: {
+  //       name: string;
+  //       description: string;
+  //       price: number;
+  //       categoryId: number;
+  //     },
+  //   ) => {
+  //     const productRepo = AppDataSource.getRepository(Product);
+  //     const categoryRepo = AppDataSource.getRepository(Category);
 
-      // Find Available Category
-      const category = await categoryRepo.findOneBy({ id: categoryId });
+  //     // Find Available Category
+  //     const category = await categoryRepo.findOneBy({ id: categoryId });
 
-      if (!category) {
-        logger.warn('Category Not Found');
-        throw new Error('Category Not Found');
-      }
+  //     if (!category) {
+  //       logger.warn('Category Not Found');
+  //       throw new Error('Category Not Found');
+  //     }
 
-      // Prepare Product
-      const product = productRepo.create({
-        name,
-        description,
-        price,
-        categoryId,
-      });
+  //     // Prepare Product
+  //     const product = productRepo.create({
+  //       name,
+  //       description,
+  //       price,
+  //       categoryId,
+  //     });
 
-      // Insert Product
-      const newProduct = await productRepo.save(product);
+  //     // Insert Product
+  //     const newProduct = await productRepo.save(product);
 
-      logger.info(`Product has been saved. Product ID is ${newProduct.id}`);
-      return product;
-    },
-  },
+  //     logger.info(`Product has been saved. Product ID is ${newProduct.id}`);
+  //     return product;
+  //   },
+  // },
 };

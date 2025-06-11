@@ -2,15 +2,9 @@ type User {
   id: ID!
   username: String!
   email: String!
-}
-
-type Query {
-  users: [User!]!
-  user(id: ID!): User
-}
-
-type Mutation {
-  createUser(username: String!, email: String!): User
-  updateUser(id: ID!, username: String, email: String): User
-  deleteUser(id: ID!): Boolean
+  nickname: String!
+  avatar: String!
+  dateofbirth: String
+  creationtime: String!
+  updatetime: String!
 }

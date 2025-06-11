@@ -1,28 +1,23 @@
-type Category {
-  id: ID!
-  name: String!
-  products: [Product!]!
-}
-
 type Product {
   id: ID!
   name: String!
   description: String!
-  price: String!
-  category: Category
+  price: Float!
+  category: Category!
+  creationtime: String!
+  updatetime: String!
 }
 
-type Query {
-  products: [Product!]!
-  categories: [Category!]!
+input CreateProductInput {
+  name: String!
+  description: String!
+  price: Float!
+  categoryId: Int!
 }
 
-type Mutation {
-  createProduct(
-    name: String!
-    description: String!
-    price: String!
-    categoryId: ID!
-  ): Product
-  createCategory(name: String!): Category
+input UpdateProductInput {
+  id: ID!
+  description: String!
+  price: Float!
+  categoryId: Int!
 }

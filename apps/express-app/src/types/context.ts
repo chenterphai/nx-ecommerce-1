@@ -12,21 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import dotenv from 'dotenv';
-import type ms from 'ms';
+import { AppDataSource } from '@/libs/postgresql';
+import type { Request, Response } from 'express';
 
-dotenv.config();
-
-const config = {
-  NODE_ENV: process.env.NODE_ENV,
-  PORT: process.env.PORT,
-  LOG_LEVEL: process.env.LOG_LEVEL as string,
-  DATABASE_URL: process.env.DATABASE_URL as string,
-
-  JWT_SECRET_KEY: process.env.JWT_SECRET_KEY!,
-  JWT_REFRESH_KEY: process.env.JWT_REFRESH_KEY!,
-  ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY as ms.StringValue,
-  REFRESH_TOKEN_EXPIRY: process.env.REFRESH_TOKEN_EXPIRY as ms.StringValue,
-};
-
-export default config;
+export interface MyContext {
+  token: string | string[] | undefined;
+  AppDataSource: typeof AppDataSource;
+  req: Request;
+  res: Response;
+  user?: any;
+}

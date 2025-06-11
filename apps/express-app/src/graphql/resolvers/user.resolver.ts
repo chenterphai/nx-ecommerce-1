@@ -20,31 +20,31 @@ export default {
     user: async (_: any, { id }: { id: number }) =>
       await User.findOneBy({ id }),
   },
-  Mutation: {
-    createUser: async (
-      _: any,
-      { username, email }: { username: string; email: string },
-    ) => {
-      const user = User.create({ username, email });
-      return await user.save();
-    },
-    updateUser: async (
-      _: any,
-      {
-        id,
-        username,
-        email,
-      }: { id: number; username?: string; email?: string },
-    ) => {
-      const user = await User.findOneBy({ id });
-      if (!user) throw new Error('User not found');
-      if (username) user.username = username;
-      if (email) user.email = email;
-      return await user.save();
-    },
-    deleteUser: async (_: any, { id }: { id: number }) => {
-      const result = await User.delete(id);
-      return result.affected === 1;
-    },
-  },
+  // Mutation: {
+  //   createUser: async (
+  //     _: any,
+  //     { username, email }: { username: string; email: string },
+  //   ) => {
+  //     const user = User.create({ username, email });
+  //     return await user.save();
+  //   },
+  //   updateUser: async (
+  //     _: any,
+  //     {
+  //       id,
+  //       username,
+  //       email,
+  //     }: { id: number; username?: string; email?: string },
+  //   ) => {
+  //     const user = await User.findOneBy({ id });
+  //     if (!user) throw new Error('User not found');
+  //     if (username) user.username = username;
+  //     if (email) user.email = email;
+  //     return await user.save();
+  //   },
+  //   deleteUser: async (_: any, { id }: { id: number }) => {
+  //     const result = await User.delete(id);
+  //     return result.affected === 1;
+  //   },
+  // },
 };

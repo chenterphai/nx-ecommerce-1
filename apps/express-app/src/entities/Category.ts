@@ -12,11 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Product } from './Product';
 
 @Entity({ name: 'fa_categories' })
-export class Category {
+export class Category extends BaseEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
@@ -25,4 +31,10 @@ export class Category {
 
   @OneToMany(() => Product, (product) => product.category)
   products!: Product[];
+
+  @Column({ default: () => 'CURRENT_TIMESTAMP' })
+  creationtime!: Date;
+
+  @Column({ default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
+  updatetime!: Date;
 }

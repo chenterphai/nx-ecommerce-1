@@ -13,6 +13,7 @@
 // limitations under the License.
 
 // Node Modules
+import 'reflect-metadata';
 import express from 'express';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
@@ -23,14 +24,11 @@ import config from '@/config';
 import { logger } from '@/libs/winston';
 
 // Database confiugration
-import { connectToDatabase } from '@/libs/postgresql';
+import { AppDataSource, connectToDatabase } from '@/libs/postgresql';
 
 // GraphQL
 import { resolvers, typeDefs } from '@/graphql/handler';
-
-type MyContext = {
-  token: string | string[] | undefined;
-};
+import { MyContext } from './types/context';
 
 export async function startServer() {
   const app = express();
@@ -53,7 +51,12 @@ export async function startServer() {
     cors<cors.CorsRequest>(),
     express.json(),
     expressMiddleware(server, {
-      context: async ({ req }) => ({ token: req.headers.token }),
+      context: async ({ req, res }) => ({
+        token: req.headers.token,
+        AppDataSource: AppDataSource,
+        req: req,
+        res: res,
+      }),
     }),
   );
 
