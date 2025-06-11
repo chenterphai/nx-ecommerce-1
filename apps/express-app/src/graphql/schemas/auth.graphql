@@ -2,36 +2,22 @@
 #   Handle User Register, Login, Refresh Token and Logout
 ##
 
-# Response Schema
-type LoginResponse {
-  status: Status!
-  content: LoginContent
-  error: String
-}
-
-#  Status Schema
-type Status {
-  code: Int!
-  status: String!
-  msg: String!
-}
-
-# Login Content Response
-type LoginContent {
-  data: LoginData!
-}
-
-#  Login Data Response
-type LoginData {
-  id: ID!
+input SignUpInput {
   username: String!
   email: String!
+  password: String!
   role: String!
-  accessToken: String!
+  nickname: String!
+  avatar: String!
+  gender: String!
 }
 
-# Login Input Request
-input LoginInput {
+input SignInInput {
   email: String!
   password: String!
+}
+
+type AuthResponse {
+  user: User
+  accessToken: String!
 }

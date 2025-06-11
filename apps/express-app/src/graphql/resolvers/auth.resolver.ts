@@ -15,54 +15,138 @@
 // Types
 import config from '@/config';
 import { Token } from '@/entities/Token';
-import { User } from '@/entities/User';
+import { Gender, Role, User } from '@/entities/User';
 import { generateAccessToken, generateRefreshToken } from '@/libs/jwt';
-import { AppDataSource } from '@/libs/postgresql';
+import { logger } from '@/libs/winston';
+import { MyContext } from '@/types/context';
 import bcrypt from 'bcrypt';
+import { GraphQLError } from 'graphql';
+import { Repository } from 'typeorm';
 
 export default {
-  // Mutation: {
-  //   login: async (
-  //     _parent: unknown,
-  //     { input }: { input: { email: string; password: string } },
-  //     context: GraphQLContext,
-  //   ) => {
-  //     const { email, password } = input;
-  //     const userRepository = AppDataSource.getRepository(User);
-  //     const tokenRepository = AppDataSource.getRepository(Token);
-  //     try {
-  //       const user = await userRepository.findOneBy({ email });
-  //       if (!user) {
-  //         return {
-  //           status: {
-  //             code: 1,
-  //             status: 'Not Found',
-  //             msg: 'User Not Found',
-  //           },
-  //           error: 'User not found',
-  //         };
-  //       }
-  //       // TODO: Check password match here with bcrypt.compare()
-  //       const passwordMatch = await bcrypt.compare(password, user.password);
-  //       if(!passwordMatch){
-  //         return {
-  //           status: {
-  //             code: 1,
-  //             status: 'Unauthorized',
-  //             msg: 'Incorrect Password.'
-  //           },
-  //           error: 'Incorrect Password.'
-  //         }
-  //       }
-  //       const accessToken = generateAccessToken(user.id, user.username);
-  //       const refreshToken = generateRefreshToken(user.id, user.username);
-  //       tokenRepository.create({token: refreshToken});
-  //       context.res.cookie('refreshToken', refreshToken, {
-  //         httpOnly: true,
-  //         secure: config.NODE_ENV === 'production',
-  //         sameSite: 'strict'
-  //       });
-  //     } catch (error) {}
-  //   },
-  // },
+  Mutation: {
+    signin: async (
+      _parent: unknown,
+      { input }: { input: { email: string; password: string } },
+      context: MyContext,
+    ) => {
+      const { email, password } = input;
+      const userRepository = context.AppDataSource.getRepository(User);
+      const tokenRepository = context.AppDataSource.getRepository(Token);
+      try {
+        const user = await userRepository.findOneBy({ email });
+        if (!user) {
+          return {
+            status: {
+              code: 1,
+              status: 'Not Found',
+              msg: 'User Not Found',
+            },
+            error: 'User not found',
+          };
+        }
+        // TODO: Check password match here with bcrypt.compare()
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+          throw new GraphQLError(`Incorrect Password!`, {
+            extensions: {
+              code: 'BAD REQUEST',
+              http: { status: 400 },
+            },
+          });
+        }
+        const accessToken = generateAccessToken(user.id, user.username);
+        const refreshToken = generateRefreshToken(user.id, user.username);
+        tokenRepository.create({ token: refreshToken });
+        context.res.cookie('refreshToken', refreshToken, {
+          httpOnly: true,
+          secure: config.NODE_ENV === 'production',
+          sameSite: 'strict',
+        });
+
+        logger.info('User login successfully.');
+
+        return {
+          user,
+          accessToken,
+        };
+      } catch (error) {
+        logger.error(`User failed while signin. ${error}`);
+        throw new Error(`Error while signin: ${error}`);
+      }
+    },
+
+    signup: async (
+      _parent: unknown,
+      {
+        input,
+      }: {
+        input: {
+          username: string;
+          email: string;
+          password: string;
+          role?: Role;
+          nickname?: string;
+          avatar?: string;
+          gender?: Gender;
+        };
+      },
+      context: MyContext,
+    ) => {
+      const { email, password, username, avatar, gender, nickname, role } =
+        input;
+
+      const userRepository: Repository<User> =
+        context.AppDataSource.getRepository(User);
+      const tokenRepository = context.AppDataSource.getRepository(Token);
+      const roleRepository = context.AppDataSource.getRepository('Role');
+
+      try {
+        // Check if user already exist
+        const existingUser = await userRepository.findOne({
+          where: [{ username: username }, { email: email }],
+        });
+        if (existingUser) {
+          throw new Error('Username or Email already in use.');
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 0);
+
+        const userData = {
+          avatar: avatar ?? 'avatar-example',
+          gender: gender ?? Gender.Other,
+          nickname: nickname ?? username,
+          role: role ?? Role.User,
+          password: hashedPassword,
+          creationtime: new Date(),
+          updatetime: new Date(),
+          username,
+          email,
+        };
+
+        const newUser = userRepository.create(userData);
+
+        await userRepository.save(newUser);
+
+        const accessToken = generateAccessToken(newUser.id, newUser.username);
+
+        const refreshToken = generateRefreshToken(newUser.id, newUser.username);
+        tokenRepository.create({ token: refreshToken });
+        context.res.cookie('refreshToken', refreshToken, {
+          httpOnly: true,
+          secure: config.NODE_ENV === 'production',
+          sameSite: 'strict',
+        });
+
+        logger.info('User registration successfully.');
+
+        return {
+          user: newUser,
+          accessToken,
+        };
+      } catch (error) {
+        throw new Error(`Error while signing up: ${error}`);
+      }
+    },
+  },
 };

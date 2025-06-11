@@ -13,6 +13,10 @@ type Query {
 }
 
 type Mutation {
+  # Auth Mutation
+  signin(input: SignInInput): AuthResponse!
+  signup(input: SignUpInput): AuthResponse!
+
   # Category Mutation
   createCategory(input: CreateCategoryInput!): Category!
 }

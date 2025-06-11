@@ -16,6 +16,8 @@
 import { Category } from '@/entities/Category';
 // import { Product } from '@/entities/Product';
 import { logger } from '@/libs/winston';
+import { authenticate } from '@/middleware/authenticate';
+import { authorize } from '@/middleware/authorize';
 import { MyContext } from '@/types/context';
 import { Repository } from 'typeorm';
 
@@ -44,6 +46,9 @@ export default {
       arg: { input: { name: string } },
       context: MyContext,
     ): Promise<Category> => {
+      authenticate(context);
+      await authorize(['admin'], context);
+
       if (!context.AppDataSource) {
         throw new Error('AppDataSource is not initialized in context.');
       }

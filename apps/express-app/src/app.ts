@@ -84,7 +84,7 @@ export async function startServer() {
     // Apply Helmet
     app.use(helmet());
 
-    // Apply Rate kimiting
+    // Apply Rate limiting
     app.use(limiter);
 
     // Apply CORS, and QraphQL Server with ExpressJS
