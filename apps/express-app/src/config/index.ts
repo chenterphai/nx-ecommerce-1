@@ -22,6 +22,7 @@ const config = {
   PORT: process.env.PORT,
   LOG_LEVEL: process.env.LOG_LEVEL as string,
   DATABASE_URL: process.env.DATABASE_URL as string,
+  WHITELIST_ORIGINS: ['https://docs.intellinex.com'],
 
   JWT_SECRET_KEY: process.env.JWT_SECRET_KEY!,
   JWT_REFRESH_KEY: process.env.JWT_REFRESH_KEY!,

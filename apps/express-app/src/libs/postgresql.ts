@@ -40,3 +40,13 @@ export async function connectToDatabase() {
     process.exit(1);
   }
 }
+
+export async function distroyFromDatabase() {
+  try {
+    await AppDataSource.destroy();
+    logger.info(`✅ Distroy from PostgreSQL via TypeORM.`);
+  } catch (error) {
+    logger.error(`❌ Database distration error: `, error);
+    process.exit(1);
+  }
+}
