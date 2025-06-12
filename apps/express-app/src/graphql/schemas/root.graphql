@@ -3,6 +3,7 @@
 type Query {
   # User Queries
   users: [User!]!
+  # Get Current User
   user: User!
 
   # Category Queries

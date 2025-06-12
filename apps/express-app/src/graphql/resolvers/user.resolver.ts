@@ -13,12 +13,27 @@
 // limitations under the License.
 
 import { User } from '@/entities/User';
+import { authenticate } from '@/middleware/authenticate';
+import { MyContext } from '@/types/context';
+import { GraphQLError } from 'graphql';
+import { Repository } from 'typeorm';
 
 export default {
   Query: {
     users: async () => await User.find(),
-    user: async (_: any, { id }: { id: number }) =>
-      await User.findOneBy({ id }),
+    user: async (_: any, args: any, context: MyContext) => {
+      authenticate(context); // Authenticate Middleware
+
+      const userRepository: Repository<User> =
+        context.AppDataSource.getRepository(User);
+
+      try {
+        const userId = context.req.userID;
+        return await userRepository.findOneBy({ id: userId });
+      } catch (err) {
+        throw new GraphQLError(`Error: ${err}`);
+      }
+    },
   },
   // Mutation: {
   //   createUser: async (
