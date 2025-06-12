@@ -1,0 +1,38 @@
+##  AUTH GRAPHQL:
+#   Handle User Register, Login, Refresh Token and Logout
+##
+
+input SignUpInput {
+  username: String!
+  email: String!
+  password: String!
+  role: String!
+  nickname: String!
+  avatar: String!
+  gender: String!
+}
+
+input SignInInput {
+  email: String!
+  password: String!
+}
+
+type Content {
+  user: User
+  accessToken: String
+}
+
+type AuthResponse {
+  status: Response
+  content: Content
+}
+
+type RefreshResponse {
+  accessToken: String!
+}
+
+type Response {
+  code: Int!
+  status: String!
+  msg: String
+}

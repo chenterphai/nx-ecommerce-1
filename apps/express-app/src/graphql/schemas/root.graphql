@@ -1,0 +1,29 @@
+# THis file stitches together all other schemas files and defines the root Query and Mutation types.
+
+type Query {
+  # User Queries
+  users: [User!]!
+  # Get Current User
+  user: User!
+
+  # Category Queries
+  categories: [Category!]!
+
+  # Product Queries
+  products: [Product!]!
+
+  # Auth Queries
+  refreshToken: RefreshResponse!
+  logout: Response!
+}
+
+type Mutation {
+  # Auth Mutation
+  signin(input: SignInInput): AuthResponse!
+  signup(input: SignUpInput): AuthResponse!
+
+  # Update User
+  updateUser(input: UpdateUserInput): Response!
+  # Category Mutation
+  createCategory(input: CreateCategoryInput!): Category!
+}

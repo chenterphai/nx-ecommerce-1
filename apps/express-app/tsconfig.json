@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    // Enable latest features
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
+    "target": "ESNext",
+    "module": "CommonJS",
+    // "moduleDetection": "force",
+    // "jsx": "react-jsx",
+    // "allowJs": true,
+    // Bundler mode
+    "moduleResolution": "Node",
+    // "allowImportingTsExtensions": true,
+    // "verbatimModuleSyntax": true,
+    // "noEmit": true,
+    // Best practices
+    "forceConsistentCasingInFileNames": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "dist",
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": [
+        "*"
+      ]
+    },
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    // Some stricter flags (disabled by default)
+    // "noUnusedLocals": false,
+    // "noUnusedParameters": false,
+    // "noPropertyAccessFromIndexSignature": false
+    "typeRoots": [
+      "./src/types",
+      "./node_modules/@types"
+    ]
+  }
+  // "include": [
+  //   "src/**/*"
+  // ],
+  // "exclude": [
+  //   "node_modules"
+  // ]
+}
