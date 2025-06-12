@@ -16,7 +16,11 @@
 import config from '@/config';
 import { Token } from '@/entities/Token';
 import { Gender, Role, User } from '@/entities/User';
-import { generateAccessToken, generateRefreshToken } from '@/libs/jwt';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from '@/libs/jwt';
 import { logger } from '@/libs/winston';
 import { MyContext } from '@/types/context';
 import bcrypt from 'bcrypt';
@@ -24,6 +28,40 @@ import { GraphQLError } from 'graphql';
 import { Repository } from 'typeorm';
 
 export default {
+  Query: {
+    refreshToken: async (
+      _parent: unknown,
+      args: any,
+      context: MyContext,
+    ): Promise<{ accessToken: string }> => {
+      const tokenRepository: Repository<Token> =
+        context.AppDataSource.getRepository(Token);
+
+      const token = context.req.cookies.refreshToken;
+
+      try {
+        const tokenExists = await tokenRepository.findOneBy({ token });
+        if (!tokenExists) {
+          throw new GraphQLError('Unauthorized');
+        }
+
+        const jwtPayload = verifyRefreshToken(token) as {
+          userID: number;
+          username: string;
+        };
+
+        const accessToken = generateAccessToken(
+          jwtPayload.userID,
+          jwtPayload.username,
+        );
+
+        return { accessToken };
+      } catch (error) {
+        throw new GraphQLError(`Error while refreshing token: ${error}`);
+      }
+    },
+  },
+
   Mutation: {
     signin: async (
       _parent: unknown,
@@ -57,7 +95,9 @@ export default {
         }
         const accessToken = generateAccessToken(user.id, user.username);
         const refreshToken = generateRefreshToken(user.id, user.username);
-        tokenRepository.create({ token: refreshToken });
+        await tokenRepository
+          .create({ token: refreshToken, user: user })
+          .save();
         context.res.cookie('refreshToken', refreshToken, {
           httpOnly: true,
           secure: config.NODE_ENV === 'production',

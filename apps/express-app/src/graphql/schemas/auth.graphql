@@ -21,3 +21,7 @@ type AuthResponse {
   user: User
   accessToken: String!
 }
+
+type RefreshResponse {
+  accessToken: String!
+}

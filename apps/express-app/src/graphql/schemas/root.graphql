@@ -10,6 +10,9 @@ type Query {
 
   # Product Queries
   products: [Product!]!
+
+  # Auth Queries
+  refreshToken: RefreshResponse!
 }
 
 type Mutation {
