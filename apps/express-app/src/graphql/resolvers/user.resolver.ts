@@ -12,7 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { User } from '@/entities/User';
+import { Gender, Role, User } from '@/entities/User';
+import {
+  checkUniqueField,
+  isValidEmail,
+  UpdateUserResponse,
+  validateEnumField,
+} from '@/libs/validation';
+import { logger } from '@/libs/winston';
 import { authenticate } from '@/middleware/authenticate';
 import { MyContext } from '@/types/context';
 import { GraphQLError } from 'graphql';
@@ -23,6 +30,12 @@ export default {
     users: async () => await User.find(),
     user: async (_: any, args: any, context: MyContext) => {
       authenticate(context); // Authenticate Middleware
+
+      const token = context.req.cookies.refreshToken;
+
+      if (!token) {
+        throw new GraphQLError('Unauthorized');
+      }
 
       const userRepository: Repository<User> =
         context.AppDataSource.getRepository(User);
@@ -35,31 +48,120 @@ export default {
       }
     },
   },
-  // Mutation: {
-  //   createUser: async (
-  //     _: any,
-  //     { username, email }: { username: string; email: string },
-  //   ) => {
-  //     const user = User.create({ username, email });
-  //     return await user.save();
-  //   },
-  //   updateUser: async (
-  //     _: any,
-  //     {
-  //       id,
-  //       username,
-  //       email,
-  //     }: { id: number; username?: string; email?: string },
-  //   ) => {
-  //     const user = await User.findOneBy({ id });
-  //     if (!user) throw new Error('User not found');
-  //     if (username) user.username = username;
-  //     if (email) user.email = email;
-  //     return await user.save();
-  //   },
-  //   deleteUser: async (_: any, { id }: { id: number }) => {
-  //     const result = await User.delete(id);
-  //     return result.affected === 1;
-  //   },
-  // },
+  Mutation: {
+    updateUser: async (
+      _parent: any,
+      {
+        input,
+      }: {
+        input: Partial<{
+          username: string;
+          email: string;
+          nickname: string;
+          avatar: string;
+          role: Role;
+          gender: Gender;
+          dateofbirth: Date;
+        }>;
+      },
+      context: MyContext,
+    ): Promise<UpdateUserResponse> => {
+      authenticate(context);
+      const { avatar, dateofbirth, email, gender, nickname, role, username } =
+        input;
+      const userRepository: Repository<User> =
+        context.AppDataSource.getRepository(User);
+
+      try {
+        // Check if Existing User
+        const userId = context.req.userID;
+
+        if (!userId) {
+          // Added explicit check for userId after authentication
+          logger.warn('Authentication failed: User ID not found in context.');
+          return {
+            code: 1,
+            status: 'Unauthorized',
+            msg: 'Authentication required or invalid token.',
+          };
+        }
+
+        const user = await userRepository.findOneBy({ id: userId });
+        if (!user) {
+          logger.warn('User not found!');
+          return {
+            code: 1,
+            status: 'Not Found',
+            msg: 'User not found!',
+          };
+        }
+
+        if (username && username !== user.username) {
+          // Only check if username is actually changing
+          const usernameCheck = await checkUniqueField(
+            userRepository,
+            'username',
+            username,
+          );
+          if (usernameCheck) return usernameCheck;
+          user.username = username;
+        }
+
+        if (email && email !== user.email) {
+          if (!isValidEmail(email)) {
+            return {
+              code: 1,
+              status: 'Bad Request',
+              msg: 'Invalid email format.',
+            };
+          }
+          // Only check if email is actually changing
+          const emailCheck = await checkUniqueField(
+            userRepository,
+            'email',
+            email,
+          );
+          if (emailCheck) return emailCheck;
+          user.email = email;
+        }
+
+        // Gender
+        if (gender && gender !== user.gender) {
+          // Only check if gender is actually changing
+          const genderValidation = validateEnumField(Gender, gender, 'Gender');
+          if (genderValidation) return genderValidation;
+          user.gender = gender;
+        }
+
+        // Role
+        if (role && role !== user.role) {
+          // Only check if role is actually changing
+          const roleValidation = validateEnumField(Role, role, 'Role');
+          if (roleValidation) return roleValidation;
+          user.role = role;
+        }
+
+        if (avatar) user.avatar = avatar;
+        if (dateofbirth) user.dateofbirth = dateofbirth;
+        if (nickname) user.nickname = nickname;
+
+        await userRepository.save(user);
+
+        logger.info(`User ID ${userId} updated successfully.`);
+
+        return {
+          code: 0,
+          status: 'OK',
+          msg: 'User updated successfully.',
+        };
+      } catch (error) {
+        logger.error(`Error while updating user.`, error);
+        return {
+          code: 1,
+          status: 'Internal Server Error',
+          msg: 'Error while updating user.',
+        };
+      }
+    },
+  },
 };

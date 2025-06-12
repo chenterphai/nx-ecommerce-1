@@ -22,6 +22,11 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
 } from '@/libs/jwt';
+import {
+  checkUniqueField,
+  isValidEmail,
+  validateEnumField,
+} from '@/libs/validation';
 import { logger } from '@/libs/winston';
 import { authenticate } from '@/middleware/authenticate';
 import { MyContext } from '@/types/context';
@@ -135,22 +140,25 @@ export default {
               status: 'Not Found',
               msg: 'User Not Found',
             },
-            error: 'User not found',
           };
         }
         // TODO: Check password match here with bcrypt.compare()
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
-          throw new GraphQLError(`Incorrect Password!`, {
-            extensions: {
-              code: 'BAD REQUEST',
-              http: { status: 400 },
+          return {
+            status: {
+              code: 1,
+              status: '400 Unauthorized',
+              msg: 'Incorrect Password.',
             },
-          });
+          };
         }
         const accessToken = generateAccessToken(user.id, user.username);
         const refreshToken = generateRefreshToken(user.id, user.username);
-        await tokenRepository.update({ user: user }, { token: refreshToken });
+        const expiresAt = parseAndAddDuration(config.REFRESH_TOKEN_EXPIRY);
+        await tokenRepository
+          .create({ user: user, token: refreshToken, expiresAt })
+          .save();
         context.res.cookie('refreshToken', refreshToken, {
           httpOnly: true,
           secure: config.NODE_ENV === 'production',
@@ -160,12 +168,25 @@ export default {
         logger.info('User login successfully.');
 
         return {
-          user,
-          accessToken,
+          status: {
+            code: 0,
+            status: 'OK',
+            msg: 'User logged in successfully.',
+          },
+          content: {
+            user,
+            accessToken,
+          },
         };
       } catch (error) {
         logger.error(`User failed while signin. ${error}`);
-        throw new Error(`Error while signin: ${error}`);
+        return {
+          status: {
+            code: 1,
+            status: 'Bad Request',
+            msg: 'User already logged in!',
+          },
+        };
       }
     },
 
@@ -194,27 +215,65 @@ export default {
       const tokenRepository = context.AppDataSource.getRepository(Token);
 
       try {
-        // Check if user already exist
-        const existingUser = await userRepository.findOne({
-          where: [{ username: username }, { email: email }],
-        });
-        if (existingUser) {
-          throw new Error('Username or Email already in use.');
-        }
-
         const hashedPassword = await bcrypt.hash(password, 0);
 
         const userData = {
           avatar: avatar ?? 'avatar-example',
-          gender: gender ?? Gender.Other,
           nickname: nickname ?? username,
-          role: role ?? Role.User,
           password: hashedPassword,
           creationtime: new Date(),
           updatetime: new Date(),
-          username,
-          email,
-        };
+        } as Partial<{
+          gender: Gender;
+          role: Role;
+          username: string;
+          email: string;
+        }>;
+
+        if (username) {
+          // Only check if username is actually changing
+          const usernameCheck = await checkUniqueField(
+            userRepository,
+            'username',
+            username,
+          );
+          if (usernameCheck) return { status: usernameCheck };
+          userData.username = username;
+        }
+
+        if (email) {
+          if (!isValidEmail(email)) {
+            return {
+              code: 1,
+              status: 'Bad Request',
+              msg: 'Invalid email format.',
+            };
+          }
+          // Only check if email is actually changing
+          const emailCheck = await checkUniqueField(
+            userRepository,
+            'email',
+            email,
+          );
+          if (emailCheck) return { status: emailCheck };
+          userData.email = email;
+        }
+
+        // Gender
+        if (gender) {
+          // Only check if gender is actually changing
+          const genderValidation = validateEnumField(Gender, gender, 'Gender');
+          if (genderValidation) return { status: genderValidation };
+          userData.gender = gender;
+        }
+
+        // Role
+        if (role) {
+          // Only check if role is actually changing
+          const roleValidation = validateEnumField(Role, role, 'Role');
+          if (roleValidation) return { status: roleValidation };
+          userData.role = role;
+        }
 
         const newUser = userRepository.create(userData);
 
@@ -223,7 +282,11 @@ export default {
         const accessToken = generateAccessToken(newUser.id, newUser.username);
 
         const refreshToken = generateRefreshToken(newUser.id, newUser.username);
-        tokenRepository.create({ token: refreshToken });
+        const expiresAt = parseAndAddDuration(config.REFRESH_TOKEN_EXPIRY);
+
+        await tokenRepository
+          .create({ token: refreshToken, user: newUser, expiresAt })
+          .save();
         context.res.cookie('refreshToken', refreshToken, {
           httpOnly: true,
           secure: config.NODE_ENV === 'production',
@@ -233,11 +296,24 @@ export default {
         logger.info('User registration successfully.');
 
         return {
-          user: newUser,
-          accessToken,
+          status: {
+            code: 0,
+            status: 'OK',
+            msg: `User ${newUser.id} registration successfully.`,
+          },
+          content: {
+            user: newUser,
+            accessToken,
+          },
         };
       } catch (error) {
-        throw new Error(`Error while signing up: ${error}`);
+        return {
+          status: {
+            code: 1,
+            status: 'Internal Server Error',
+            msg: `Error while signing up: ${error}`,
+          },
+        };
       }
     },
   },

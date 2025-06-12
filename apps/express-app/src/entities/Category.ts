@@ -29,6 +29,7 @@ export class Category extends BaseEntity {
   @Column()
   name!: string;
 
+  // Not Include in Database table
   @OneToMany(() => Product, (product) => product.category)
   products!: Product[];
 

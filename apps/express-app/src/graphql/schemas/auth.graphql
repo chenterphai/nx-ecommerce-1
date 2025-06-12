@@ -17,16 +17,21 @@ input SignInInput {
   password: String!
 }
 
-type AuthResponse {
+type Content {
   user: User
-  accessToken: String!
+  accessToken: String
+}
+
+type AuthResponse {
+  status: Response
+  content: Content
 }
 
 type RefreshResponse {
   accessToken: String!
 }
 
-type LogoutResponse {
+type Response {
   code: Int!
   status: String!
   msg: String
