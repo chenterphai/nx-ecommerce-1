@@ -13,6 +13,7 @@ type Query {
 
   # Auth Queries
   refreshToken: RefreshResponse!
+  logout: LogoutResponse!
 }
 
 type Mutation {

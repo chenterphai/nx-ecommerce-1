@@ -16,12 +16,14 @@
 import config from '@/config';
 import { Token } from '@/entities/Token';
 import { Gender, Role, User } from '@/entities/User';
+import { parseAndAddDuration } from '@/libs/date-formatter';
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
 } from '@/libs/jwt';
 import { logger } from '@/libs/winston';
+import { authenticate } from '@/middleware/authenticate';
 import { MyContext } from '@/types/context';
 import bcrypt from 'bcrypt';
 import { GraphQLError } from 'graphql';
@@ -37,9 +39,13 @@ export default {
       const tokenRepository: Repository<Token> =
         context.AppDataSource.getRepository(Token);
 
-      const token = context.req.cookies.refreshToken;
-
       try {
+        const token = context.req.cookies.refreshToken;
+
+        if (!token) {
+          throw new GraphQLError('Refresh token is required.');
+        }
+
         const tokenExists = await tokenRepository.findOneBy({ token });
         if (!tokenExists) {
           throw new GraphQLError('Unauthorized');
@@ -50,14 +56,63 @@ export default {
           username: string;
         };
 
+        // Generate Access Token
         const accessToken = generateAccessToken(
           jwtPayload.userID,
           jwtPayload.username,
         );
 
+        // Generate Refresh Token and Update in Database
+        const refreshToken = generateRefreshToken(
+          jwtPayload.userID,
+          jwtPayload.username,
+        );
+
+        const expiresAt = parseAndAddDuration(config.REFRESH_TOKEN_EXPIRY);
+
+        await tokenRepository.update(
+          { token: token },
+          { token: refreshToken, expiresAt },
+        );
+
+        context.res.cookie('refreshToken', refreshToken, {
+          httpOnly: true,
+          secure: config.NODE_ENV === 'production',
+          sameSite: 'strict',
+        });
+
         return { accessToken };
       } catch (error) {
         throw new GraphQLError(`Error while refreshing token: ${error}`);
+      }
+    },
+
+    logout: async (_parent: any, args: any, context: MyContext) => {
+      authenticate(context); // Authenticate Middleware
+
+      const tokenRepository: Repository<Token> =
+        context.AppDataSource.getRepository(Token);
+
+      try {
+        const token = context.req.cookies.refreshToken;
+        if (token) {
+          await tokenRepository.delete({ token });
+          logger.info(`User logged out successfully.`);
+        }
+
+        context.res.clearCookie('refreshToken', {
+          httpOnly: true,
+          secure: config.NODE_ENV === 'production',
+          sameSite: 'strict',
+        });
+
+        return {
+          code: 0,
+          status: 'OK',
+          msg: 'User logged out successfully.',
+        };
+      } catch (error) {
+        throw new GraphQLError(`Error while logging out: ${error}`);
       }
     },
   },
@@ -95,9 +150,7 @@ export default {
         }
         const accessToken = generateAccessToken(user.id, user.username);
         const refreshToken = generateRefreshToken(user.id, user.username);
-        await tokenRepository
-          .create({ token: refreshToken, user: user })
-          .save();
+        await tokenRepository.update({ user: user }, { token: refreshToken });
         context.res.cookie('refreshToken', refreshToken, {
           httpOnly: true,
           secure: config.NODE_ENV === 'production',
@@ -139,7 +192,6 @@ export default {
       const userRepository: Repository<User> =
         context.AppDataSource.getRepository(User);
       const tokenRepository = context.AppDataSource.getRepository(Token);
-      const roleRepository = context.AppDataSource.getRepository('Role');
 
       try {
         // Check if user already exist
